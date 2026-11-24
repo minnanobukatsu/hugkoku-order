@@ -1,0 +1,1559 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hug刻（はぐこく）｜オーダー注文フォーム</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;500;700&display=swap" rel="stylesheet">
+  <script>
+    // HTML内のimg要素のonerrorよりも先に定義しておくフォールバック関数
+    function handleSampleImageError(imgEl, filename) {
+      if (!imgEl || !imgEl.parentNode) return;
+      imgEl.onerror = null;
+      imgEl.classList.add('hidden');
+      const fallback = document.createElement('div');
+      fallback.className = "w-full h-36 rounded-xl bg-[#F8F4EC] border border-dashed border-[#DFD3BE] flex flex-col items-center justify-center p-3 text-center";
+      fallback.innerHTML = `<span class="text-xl mb-1">🖼️</span><span class="text-[11px] font-bold text-[#8C5535]">${filename}</span><span class="text-[10px] text-[#7D6659] mt-0.5">GitHubの同じフォルダに配置で表示</span>`;
+      imgEl.parentNode.insertBefore(fallback, imgEl);
+    }
+  </script>
+  <style>
+    :root {
+      --bg-cream: #F8F4EC;
+      --card-bg: #FFFDF9;
+      --border-wood: #E6DAC6;
+      --text-main: #4A3930;
+      --text-sub: #7D6759;
+      --brand-brown: #8C5535;
+      --accent-terracotta: #C86D51;
+      --accent-terracotta-dark: #B1593E;
+    }
+
+    body {
+      font-family: 'Zen Maru Gothic', sans-serif;
+      background-color: var(--bg-cream);
+      background-image: radial-gradient(rgba(140, 85, 53, 0.04) 1px, transparent 1px);
+      background-size: 20px 20px;
+      color: var(--text-main);
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .wood-card {
+      background-color: var(--card-bg);
+      border: 1.5px solid var(--border-wood);
+      box-shadow: 0 6px 20px rgba(74, 57, 48, 0.05);
+    }
+
+    .accent-btn {
+      background: linear-gradient(135deg, #D17558 0%, #C26346 100%);
+      color: #FFFFFF;
+      transition: all 0.2s ease;
+    }
+    .accent-btn:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 8px 20px rgba(200, 109, 81, 0.3);
+    }
+    .accent-btn:active:not(:disabled) {
+      transform: translateY(0);
+    }
+    .accent-btn:disabled {
+      background: #D4CAC0;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+
+    /* 選択カードのデザイン */
+    .select-card {
+      position: relative;
+      border: 2px solid #E8DEC9;
+      background-color: #FFFFFF;
+      transition: all 0.2s ease;
+    }
+    .select-card:hover {
+      border-color: #D4BFA3;
+    }
+    .select-card:has(input:checked) {
+      border-color: var(--accent-terracotta);
+      background-color: #FFF8F5;
+      box-shadow: 0 4px 12px rgba(200, 109, 81, 0.12);
+    }
+    .select-card .check-indicator {
+      width: 22px;
+      height: 22px;
+      border-radius: 9999px;
+      border: 2px solid #D5C7B2;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: all 0.2s ease;
+      background: #FFFFFF;
+    }
+    .select-card:has(input:checked) .check-indicator {
+      border-color: var(--accent-terracotta);
+      background-color: var(--accent-terracotta);
+      color: #FFFFFF;
+    }
+    .select-card .check-indicator svg {
+      opacity: 0;
+      transform: scale(0.6);
+      transition: all 0.2s ease;
+    }
+    .select-card:has(input:checked) .check-indicator svg {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    /* スムーズな出現アニメーション */
+    @keyframes fadeSlideIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .animate-in {
+      animation: fadeSlideIn 0.28s ease-out forwards;
+    }
+
+    /* フォーム入力欄の統一スタイル */
+    .form-input {
+      width: 100%;
+      border-radius: 0.875rem;
+      border: 1.5px solid #DFD3BE;
+      background-color: #FFFFFF;
+      padding: 0.75rem 0.9rem;
+      font-size: 0.92rem;
+      color: var(--text-main);
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+    .form-input:focus {
+      outline: none;
+      border-color: var(--accent-terracotta);
+      box-shadow: 0 0 0 3px rgba(200, 109, 81, 0.14);
+    }
+
+    /* ステッププログレスバー */
+    .step-item {
+      position: relative;
+      z-index: 1;
+    }
+    .step-dot {
+      width: 28px;
+      height: 28px;
+      border-radius: 9999px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 700;
+      margin: 0 auto 4px;
+      transition: all 0.25s ease;
+      background-color: #EFE7D8;
+      color: #8C786B;
+      border: 2px solid #DFD2BC;
+    }
+    .step-item.is-active .step-dot {
+      background-color: var(--accent-terracotta);
+      color: #FFFFFF;
+      border-color: var(--accent-terracotta);
+      box-shadow: 0 0 0 4px rgba(200, 109, 81, 0.18);
+    }
+    .step-item.is-done .step-dot {
+      background-color: var(--brand-brown);
+      color: #FFFFFF;
+      border-color: var(--brand-brown);
+    }
+    .step-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: #9A8679;
+      transition: color 0.2s ease;
+    }
+    .step-item.is-active .step-label {
+      color: var(--accent-terracotta);
+    }
+    .step-item.is-done .step-label {
+      color: var(--brand-brown);
+    }
+
+    /* 戻るボタン */
+    .back-btn {
+      background-color: #FFFFFF;
+      border: 1.5px solid #D5C7B2;
+      color: #6B584C;
+      transition: all 0.2s ease;
+    }
+    .back-btn:hover {
+      background-color: #F4EBDC;
+      border-color: #BFA98E;
+    }
+
+    /* 制作事例の横スクロールバーをすっきり表示 */
+    .sample-scroll {
+      scrollbar-width: thin;
+      scrollbar-color: #D5C7B2 transparent;
+    }
+    .sample-scroll::-webkit-scrollbar {
+      height: 6px;
+    }
+    .sample-scroll::-webkit-scrollbar-thumb {
+      background-color: #D5C7B2;
+      border-radius: 9999px;
+    }
+  </style>
+</head>
+<body class="min-h-screen pb-32">
+
+  <!-- ヘッダー -->
+  <header class="bg-gradient-to-b from-[#F4EBDC] to-[#EFE4D2] border-b border-[#DFD2BC] pt-7 pb-6 px-4 text-center relative overflow-hidden">
+    <div class="max-w-xl mx-auto relative z-10">
+      <div class="mb-2.5 flex justify-center">
+        <!-- 背景透過ロゴ画像（GitHubの同じ階層に logo.png として配置） -->
+        <img
+          src="./logo.png"
+          alt="Hug刻（はぐこく）ロゴ"
+          class="w-32 sm:w-36 h-auto object-contain mx-auto drop-shadow-sm"
+          onerror="this.style.display='none'; document.getElementById('fallbackLogo').classList.remove('hidden');"
+        />
+        <!-- 万が一 logo.png が見つからない場合のみ表示する予備ロゴ -->
+        <div id="fallbackLogo" class="hidden flex-col items-center">
+          <svg width="84" height="72" viewBox="0 0 120 105" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="Hug刻 親子ロゴ">
+            <circle cx="44" cy="24" r="16" fill="#8C4A1C"/>
+            <circle cx="75" cy="36" r="12.5" fill="#8C4A1C"/>
+            <path d="M22 48C17 62 24 80 58 96C90 81 98 63 92 49C88 41 79 41 72 46C66 50 61 52 57 48C51 41 42 36 33 38C27 39 24 43 22 48Z" fill="#8C4A1C"/>
+            <path d="M39 58C48 70 67 71 79 62" stroke="#EFE4D2" stroke-width="5.5" stroke-linecap="round"/>
+          </svg>
+          <span class="text-2xl font-bold tracking-widest text-[#8C4A1C] mt-1" style="font-family: Georgia, serif;">Hug刻</span>
+        </div>
+      </div>
+      <h1 class="text-lg sm:text-xl font-bold tracking-wider text-[#5C3D2E]">Hug刻（はぐこく）</h1>
+      <p class="text-xs text-[#7D6659] mt-1">今日の気持ちを、未来の記憶に。</p>
+      <div class="mt-3 inline-flex items-center gap-1.5 bg-white/85 text-[#8C5535] text-xs font-bold px-4 py-1.5 rounded-full border border-[#DFD2BC] shadow-sm">
+        <span>🌿</span>
+        <span>公式LINE オーダー受付フォーム</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- 進捗プログレスバー（現在地が一目でわかるナビゲーション） -->
+  <div id="stepProgressWrap" class="sticky top-0 z-30 bg-[#F8F4EC]/95 backdrop-blur-md border-b border-[#E6DAC6] py-3 px-4 shadow-xs">
+    <div class="max-w-xl mx-auto">
+      <div class="relative grid grid-cols-4 gap-1 text-center">
+        <!-- 背景の接続ライン -->
+        <div class="absolute top-3.5 left-[12.5%] right-[12.5%] h-0.5 bg-[#DFD2BC] z-0">
+          <div id="progressLineFill" class="h-full bg-[#8C5535] transition-all duration-300" style="width: 0%;"></div>
+        </div>
+
+        <button type="button" onclick="tryJumpStep(1)" class="step-item is-active" data-step="1">
+          <div class="step-dot">1</div>
+          <span class="step-label block">商品を選ぶ</span>
+        </button>
+        <button type="button" onclick="tryJumpStep(2)" class="step-item" data-step="2">
+          <div class="step-dot">2</div>
+          <span class="step-label block">内容・写真</span>
+        </button>
+        <button type="button" onclick="tryJumpStep(3)" class="step-item" data-step="3">
+          <div class="step-dot">3</div>
+          <span class="step-label block">オプション</span>
+        </button>
+        <button type="button" onclick="tryJumpStep(4)" class="step-item" data-step="4">
+          <div class="step-dot">4</div>
+          <span class="step-label block">お客様情報</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- メインフォーム -->
+  <main class="max-w-xl mx-auto px-4 mt-5">
+    <form id="orderForm" class="space-y-5" novalidate>
+
+      <!-- バリデーションエラー表示エリア -->
+      <div id="formErrorBanner" class="hidden bg-red-50 border-2 border-red-200 text-red-700 text-xs sm:text-sm font-bold rounded-2xl p-3.5 leading-relaxed animate-in"></div>
+
+      <!-- ================================================== -->
+      <!-- STEP 1: 商品選択 -->
+      <!-- ================================================== -->
+      <div id="step1" class="step-panel space-y-4 animate-in">
+        <div class="wood-card rounded-2xl p-3.5 text-center bg-[#FFFDF9]">
+          <p class="text-xs font-bold text-[#8C5535]">オーダーのご検討ありがとうございます🌱</p>
+          <p class="text-[11px] text-[#7D6659] mt-0.5">画面の案内にそって進めるだけで、かんたんに注文できます。</p>
+        </div>
+
+        <section class="wood-card rounded-3xl p-5 space-y-4">
+          <div class="flex items-center gap-2.5 border-b border-[#EFE7D8] pb-3">
+            <span class="bg-[#C86D51] text-white text-xs font-bold px-3 py-1 rounded-full tracking-wide">STEP 1 / 4</span>
+            <h2 class="font-bold text-base text-[#4A3930]">ご希望の商品を選んでください</h2>
+          </div>
+
+          <div class="space-y-3" id="productList">
+            <!-- カテゴリA：木製アイテム -->
+            <p class="text-[11px] font-bold text-[#8C5535] tracking-wider flex items-center gap-1.5">
+              <span>🪵</span> レーザー刻印アイテム（ご自宅へ郵送）
+            </p>
+
+            <label class="select-card block rounded-2xl p-4 cursor-pointer">
+              <input type="radio" name="product" value="オリジナル木製キーホルダー" data-price="1200" data-type="physical" data-shipping="200" data-has-keyholder="true" class="sr-only" required>
+              <div class="flex items-start gap-3">
+                <div class="check-indicator mt-0.5">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <div class="flex flex-wrap items-baseline justify-between gap-1">
+                    <span class="font-bold text-sm sm:text-[15px] text-[#4A3930]">オリジナル木製キーホルダー</span>
+                    <span class="font-bold text-base text-[#C86D51]">1,200<span class="text-xs font-normal text-[#7D6659]">円</span></span>
+                  </div>
+                  <p class="text-xs text-[#7D6659] mt-1 leading-relaxed">
+                    丸型（直径4〜5cm）・お子さまのお絵かきやロゴ・イラストを表面にレーザー刻印します（裏面の名前・日付・背番号等はオプション追加可）。
+                  </p>
+                  <div class="mt-2 flex flex-wrap gap-1.5">
+                    <span class="text-[10px] font-bold bg-[#F4EBDC] text-[#8C5535] px-2 py-0.5 rounded-md">＋送料200円</span>
+                    <span class="text-[10px] font-bold bg-[#F4EBDC] text-[#8C5535] px-2 py-0.5 rounded-md">オプション追加可</span>
+                  </div>
+                </div>
+              </div>
+            </label>
+
+            <!-- カテゴリB：オリジナルキャラクター・セットメニュー -->
+            <div class="pt-3 border-t border-dashed border-[#DFD3BE] space-y-3">
+              <p class="text-[11px] font-bold text-[#8C5535] tracking-wider flex items-center gap-1.5">
+                <span>📱</span> オリジナルキャラクター・セットメニュー
+              </p>
+
+              <!-- ② オリジナルキャラクター アイコン作成 -->
+              <label class="select-card block rounded-2xl p-4 cursor-pointer">
+                <input type="radio" name="product" value="オリジナルキャラクター アイコン作成" data-price="500" data-type="icon" data-shipping="0" data-has-keyholder="false" class="sr-only">
+                <div class="flex items-start gap-3">
+                  <div class="check-indicator mt-0.5">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <div class="flex flex-wrap items-baseline justify-between gap-1">
+                      <div class="flex items-center gap-1.5 flex-wrap">
+                        <span class="text-[10px] font-bold bg-[#C86D51] text-white px-2 py-0.5 rounded-full">お試し人気</span>
+                        <span class="font-bold text-sm sm:text-[15px] text-[#4A3930]">オリジナルキャラクター アイコン作成</span>
+                      </div>
+                      <div class="text-right ml-auto">
+                        <span class="text-[11px] line-through text-[#A39185] mr-1">1,000円</span>
+                        <span class="font-bold text-base text-[#C86D51]">500<span class="text-xs font-normal text-[#7D6659]">円</span></span>
+                      </div>
+                    </div>
+                    <p class="text-xs text-[#7D6659] mt-1 leading-relaxed">
+                      お写真の特徴を見て、担当クリエイターが最も魅力的に見えるタッチ（ゆるかわ・シンプル・漫画風など）でお任せ作成し、SNS・LINE用アイコン画像としてLINEでお届けします。
+                    </p>
+                  </div>
+                </div>
+              </label>
+
+              <!-- ③ オリジナルキャラクター ＋ オリジナル木製キーホルダー作成 -->
+              <label class="select-card block rounded-2xl p-4 cursor-pointer">
+                <input type="radio" name="product" value="オリジナルキャラクター ＋ オリジナル木製キーホルダー作成" data-price="1700" data-type="icon_keyholder" data-shipping="200" data-has-keyholder="true" class="sr-only">
+                <div class="flex items-start gap-3">
+                  <div class="check-indicator mt-0.5">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <div class="flex flex-wrap items-baseline justify-between gap-1">
+                      <div class="flex items-center gap-1.5 flex-wrap">
+                        <span class="text-[10px] font-bold bg-[#8C5535] text-white px-2 py-0.5 rounded-full">2点セット割</span>
+                        <span class="font-bold text-sm sm:text-[15px] text-[#4A3930]">オリジナルキャラクター ＋ オリジナル木製キーホルダー作成</span>
+                      </div>
+                      <div class="text-right ml-auto">
+                        <span class="text-[11px] line-through text-[#A39185] mr-1">2,200円</span>
+                        <span class="font-bold text-base text-[#C86D51]">1,700<span class="text-xs font-normal text-[#7D6659]">円</span></span>
+                      </div>
+                    </div>
+                    <p class="text-xs text-[#7D6659] mt-1 leading-relaxed">
+                      お写真の特徴に合わせたお任せタッチでキャラクターを作成し、アイコンデータ納品とあわせてそのキャラを刻印した木製キーホルダーをご自宅へ郵送します。
+                    </p>
+                    <div class="mt-2 flex flex-wrap gap-1.5">
+                      <span class="text-[10px] font-bold bg-[#F4EBDC] text-[#8C5535] px-2 py-0.5 rounded-md">＋送料200円</span>
+                      <span class="text-[10px] font-bold bg-[#F4EBDC] text-[#8C5535] px-2 py-0.5 rounded-md">アイコン画像付き</span>
+                      <span class="text-[10px] font-bold bg-[#F4EBDC] text-[#8C5535] px-2 py-0.5 rounded-md">オプション追加可</span>
+                    </div>
+                  </div>
+                </div>
+              </label>
+
+              <!-- ④ オリジナルキャラクター ＋ LINEスタンプ作成 -->
+              <label class="select-card block rounded-2xl p-4 cursor-pointer">
+                <input type="radio" name="product" value="オリジナルキャラクター ＋ LINEスタンプ作成" data-price="2480" data-type="stamp_new" data-shipping="0" data-has-keyholder="false" class="sr-only">
+                <div class="flex items-start gap-3">
+                  <div class="check-indicator mt-0.5">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <div class="flex flex-wrap items-baseline justify-between gap-1">
+                      <div class="flex items-center gap-1.5 flex-wrap">
+                        <span class="text-[10px] font-bold bg-[#8C5535] text-white px-2 py-0.5 rounded-full">2点セット割</span>
+                        <span class="font-bold text-sm sm:text-[15px] text-[#4A3930]">オリジナルキャラクター ＋ LINEスタンプ作成</span>
+                      </div>
+                      <div class="text-right ml-auto">
+                        <span class="text-[11px] line-through text-[#A39185] mr-1">2,980円〜</span>
+                        <span class="font-bold text-base text-[#C86D51]">2,480<span class="text-xs font-normal text-[#7D6659]">円〜</span></span>
+                      </div>
+                    </div>
+                    <p class="text-xs text-[#7D6659] mt-1 leading-relaxed">
+                      お写真の特徴に合わせたお任せタッチでキャラクターを作成し、そのまま8個〜40個のオリジナルLINEスタンプもまとめて制作します。
+                    </p>
+                    <div class="mt-2 flex flex-wrap gap-1.5">
+                      <span class="text-[10px] font-bold bg-[#FDF6F3] text-[#C86D51] border border-[#EBC9BC] px-2 py-0.5 rounded-md">🎁 同時作成でキャラ作成費 500円→無料！</span>
+                    </div>
+                  </div>
+                </div>
+              </label>
+
+              <!-- ⑤ オリジナルキャラクター ＋ LINEスタンプ ＋ オリジナル木製キーホルダー作成（3点セット） -->
+              <label class="select-card block rounded-2xl p-4 cursor-pointer">
+                <input type="radio" name="product" value="オリジナルキャラクター ＋ LINEスタンプ ＋ オリジナル木製キーホルダー作成" data-price="3680" data-type="stamp_keyholder" data-shipping="200" data-has-keyholder="true" class="sr-only">
+                <div class="flex items-start gap-3">
+                  <div class="check-indicator mt-0.5">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <div class="flex flex-wrap items-baseline justify-between gap-1">
+                      <div class="flex items-center gap-1.5 flex-wrap">
+                        <span class="text-[10px] font-bold bg-[#C86D51] text-white px-2 py-0.5 rounded-full">全部入り3点セット</span>
+                        <span class="font-bold text-sm sm:text-[15px] text-[#4A3930]">オリジナルキャラクター ＋ LINEスタンプ ＋ オリジナル木製キーホルダー作成</span>
+                      </div>
+                      <div class="text-right ml-auto">
+                        <span class="text-[11px] line-through text-[#A39185] mr-1">4,180円〜</span>
+                        <span class="font-bold text-base text-[#C86D51]">3,680<span class="text-xs font-normal text-[#7D6659]">円〜</span></span>
+                      </div>
+                    </div>
+                    <p class="text-xs text-[#7D6659] mt-1 leading-relaxed">
+                      作成したオリジナルキャラクターで「LINEスタンプ（8〜40個）」と「木製キーホルダー（郵送）」をまとめてお作りするフルセットです。
+                    </p>
+                    <div class="mt-2 flex flex-wrap gap-1.5">
+                      <span class="text-[10px] font-bold bg-[#FDF6F3] text-[#C86D51] border border-[#EBC9BC] px-2 py-0.5 rounded-md">🎁 キャラ作成費 500円→無料！</span>
+                      <span class="text-[10px] font-bold bg-[#F4EBDC] text-[#8C5535] px-2 py-0.5 rounded-md">＋送料200円</span>
+                      <span class="text-[10px] font-bold bg-[#F4EBDC] text-[#8C5535] px-2 py-0.5 rounded-md">オプション追加可</span>
+                    </div>
+                  </div>
+                </div>
+              </label>
+            </div>
+          </div>
+        </section>
+
+        <!-- スタンプ選択時の詳細設定（個数選択） -->
+        <section id="stampCountSection" class="hidden wood-card rounded-3xl p-5 space-y-4 animate-in">
+          <div class="border-b border-[#EFE7D8] pb-3">
+            <div class="flex items-center gap-2.5">
+              <span class="bg-[#8C5535] text-white text-xs font-bold px-3 py-1 rounded-full">個数選択</span>
+              <h2 id="stampCountTitle" class="font-bold text-base text-[#4A3930]">LINEスタンプの作成個数を選んでください</h2>
+            </div>
+            <p id="stampCountSubNote" class="text-xs text-[#8C5535] mt-1.5 font-medium">
+              ※オリジナルキャラクター作成費（500円→無料）を含んだセット合計金額です。
+            </p>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2.5">
+            <label class="select-card rounded-2xl p-3 cursor-pointer text-center">
+              <input type="radio" name="stampCount" value="8個セット" data-stamp-price="2480" data-stamp-orig="2980" checked class="sr-only">
+              <span class="block text-[10px] font-bold text-[#8C5535] mb-0.5">まずはお試し</span>
+              <span class="block font-bold text-sm text-[#4A3930]">8個セット</span>
+              <span id="stampOrig8" class="block text-[10px] line-through text-[#A39185] mt-0.5">2,980円</span>
+              <span id="stampPrice8" class="block text-sm font-bold text-[#C86D51]">セット計 2,480円</span>
+            </label>
+            <label class="select-card rounded-2xl p-3 cursor-pointer text-center">
+              <input type="radio" name="stampCount" value="16個セット" data-stamp-price="4480" data-stamp-orig="4980" class="sr-only">
+              <span class="block text-[10px] font-bold text-[#C86D51] mb-0.5">★ 一番人気</span>
+              <span class="block font-bold text-sm text-[#4A3930]">16個セット</span>
+              <span id="stampOrig16" class="block text-[10px] line-through text-[#A39185] mt-0.5">4,980円</span>
+              <span id="stampPrice16" class="block text-sm font-bold text-[#C86D51]">セット計 4,480円</span>
+            </label>
+            <label class="select-card rounded-2xl p-3 cursor-pointer text-center">
+              <input type="radio" name="stampCount" value="32個セット" data-stamp-price="7480" data-stamp-orig="7980" class="sr-only">
+              <span class="block text-[10px] font-bold text-[#8C5535] mb-0.5">たっぷり使える</span>
+              <span class="block font-bold text-sm text-[#4A3930]">32個セット</span>
+              <span id="stampOrig32" class="block text-[10px] line-through text-[#A39185] mt-0.5">7,980円</span>
+              <span id="stampPrice32" class="block text-sm font-bold text-[#C86D51]">セット計 7,480円</span>
+            </label>
+            <label class="select-card rounded-2xl p-3 cursor-pointer text-center">
+              <input type="radio" name="stampCount" value="40個セット" data-stamp-price="9300" data-stamp-orig="9800" class="sr-only">
+              <span class="block text-[10px] font-bold text-[#8C5535] mb-0.5">フルセット</span>
+              <span class="block font-bold text-sm text-[#4A3930]">40個セット</span>
+              <span id="stampOrig40" class="block text-[10px] line-through text-[#A39185] mt-0.5">9,800円</span>
+              <span id="stampPrice40" class="block text-sm font-bold text-[#C86D51]">セット計 9,300円</span>
+            </label>
+          </div>
+
+          <!-- LINEスタンプのシステム仕様に関する重要なご案内 -->
+          <div class="bg-[#FDF6F3] border border-[#EBC9BC] rounded-2xl p-3.5 text-xs text-[#5C3D2E] leading-relaxed">
+            <p class="font-bold text-[#C86D51] mb-1">💡 スタンプお受け取り時のご注意</p>
+            <p>
+              LINEクリエイターズマーケットのシステム仕様上、<strong>非公開設定（専用URL）</strong>にて登録し、完成後のダウンロード時に別途LINEストアでの<strong>最低購入金額（190円）</strong>がかかります。あらかじめご了承ください。
+            </p>
+          </div>
+        </section>
+
+        <!-- 商品選択後に連動表示される制作事例ギャラリー -->
+        <section id="sampleGallerySection" class="hidden wood-card rounded-3xl p-5 space-y-4 animate-in">
+          <div class="flex items-center justify-between gap-2 border-b border-[#EFE7D8] pb-3">
+            <div class="flex items-center gap-2">
+              <span class="bg-[#8C5535] text-white text-xs font-bold px-3 py-1 rounded-full">制作事例</span>
+              <h2 class="font-bold text-base text-[#4A3930]">こんな仕上がりになります✨</h2>
+            </div>
+            <span class="text-[11px] text-[#7D6659]">タップで拡大</span>
+          </div>
+
+          <!-- LINEスタンプ作成例（スタンプセット選択時のみ表示） -->
+          <div id="stampSampleBlock" class="hidden space-y-2">
+            <p class="text-xs font-bold text-[#8C5535] flex items-center gap-1">
+              <span>💬</span> LINEスタンプ制作例（16個セット）
+            </p>
+            <button type="button" onclick="openLightbox('./sample_stamp_1.jpg', 'LINEスタンプ制作例（16個セット）')" class="block w-full bg-white rounded-2xl border border-[#E8DEC9] p-2 hover:border-[#C86D51] transition overflow-hidden text-left group">
+              <img
+                src="./sample_stamp_1.jpg"
+                alt="LINEスタンプ制作例"
+                class="w-full h-auto max-h-72 object-contain mx-auto rounded-xl group-hover:scale-[1.01] transition"
+                onerror="handleSampleImageError(this, 'sample_stamp_1.jpg')"
+              />
+              <p class="text-[11px] text-center text-[#7D6659] mt-1.5">🔍 タップすると大きく見られます</p>
+            </button>
+          </div>
+
+          <!-- オリジナルキャラクター作成例（横スクロール5点） -->
+          <div id="charSampleBlock" class="hidden space-y-2">
+            <div class="flex items-center justify-between">
+              <p class="text-xs font-bold text-[#8C5535] flex items-center gap-1">
+                <span>🎨</span> オリジナルキャラクター制作例（全5点）
+              </p>
+              <span class="text-[10px] text-[#9A8679]">横にスワイプ →</span>
+            </div>
+            <div class="sample-scroll flex gap-3 overflow-x-auto pb-2 snap-x snap-mandatory">
+              <button type="button" onclick="openLightbox('./sample_char_1.jpg', 'オリジナルキャラクター制作例①（ユニフォーム）')" class="snap-start shrink-0 w-64 sm:w-72 bg-white rounded-2xl border border-[#E8DEC9] p-2 hover:border-[#C86D51] transition text-left">
+                <img
+                  src="./sample_char_1.jpg"
+                  alt="オリジナルキャラクター制作例1"
+                  class="w-full h-36 object-contain rounded-xl bg-white"
+                  onerror="handleSampleImageError(this, 'sample_char_1.jpg')"
+                />
+                <p class="text-[11px] font-bold text-[#5C3D2E] mt-1.5 px-1">例① バスケユニフォーム姿</p>
+              </button>
+
+              <button type="button" onclick="openLightbox('./sample_char_2.jpg', 'オリジナルキャラクター制作例②（ドレス）')" class="snap-start shrink-0 w-64 sm:w-72 bg-white rounded-2xl border border-[#E8DEC9] p-2 hover:border-[#C86D51] transition text-left">
+                <img
+                  src="./sample_char_2.jpg"
+                  alt="オリジナルキャラクター制作例2"
+                  class="w-full h-36 object-contain rounded-xl bg-white"
+                  onerror="handleSampleImageError(this, 'sample_char_2.jpg')"
+                />
+                <p class="text-[11px] font-bold text-[#5C3D2E] mt-1.5 px-1">例② プリンセスドレス姿</p>
+              </button>
+
+              <button type="button" onclick="openLightbox('./sample_char_3.jpg', 'オリジナルキャラクター制作例③（キッズ）')" class="snap-start shrink-0 w-64 sm:w-72 bg-white rounded-2xl border border-[#E8DEC9] p-2 hover:border-[#C86D51] transition text-left">
+                <img
+                  src="./sample_char_3.jpg"
+                  alt="オリジナルキャラクター制作例3"
+                  class="w-full h-36 object-contain rounded-xl bg-white"
+                  onerror="handleSampleImageError(this, 'sample_char_3.jpg')"
+                />
+                <p class="text-[11px] font-bold text-[#5C3D2E] mt-1.5 px-1">例③ 普段着スタイル（男の子）</p>
+              </button>
+
+              <button type="button" onclick="openLightbox('./sample_char_4.jpg', 'オリジナルキャラクター制作例④（ナチュラル）')" class="snap-start shrink-0 w-64 sm:w-72 bg-white rounded-2xl border border-[#E8DEC9] p-2 hover:border-[#C86D51] transition text-left">
+                <img
+                  src="./sample_char_4.jpg"
+                  alt="オリジナルキャラクター制作例4"
+                  class="w-full h-36 object-contain rounded-xl bg-white"
+                  onerror="handleSampleImageError(this, 'sample_char_4.jpg')"
+                />
+                <p class="text-[11px] font-bold text-[#5C3D2E] mt-1.5 px-1">例④ メガネ・お団子ヘア</p>
+              </button>
+
+              <button type="button" onclick="openLightbox('./sample_char_5.jpg', 'オリジナルキャラクター制作例⑤（カジュアル）')" class="snap-start shrink-0 w-64 sm:w-72 bg-white rounded-2xl border border-[#E8DEC9] p-2 hover:border-[#C86D51] transition text-left">
+                <img
+                  src="./sample_char_5.jpg"
+                  alt="オリジナルキャラクター制作例5"
+                  class="w-full h-36 object-contain rounded-xl bg-white"
+                  onerror="handleSampleImageError(this, 'sample_char_5.jpg')"
+                />
+                <p class="text-[11px] font-bold text-[#5C3D2E] mt-1.5 px-1">例⑤ カジュアル私服スタイル</p>
+              </button>
+            </div>
+          </div>
+
+          <p class="text-[11px] text-[#7D6659] bg-[#FAF6EE] rounded-xl p-2.5 leading-relaxed">
+            ※お写真の特徴に合わせて、担当クリエイターが最も魅力的に見えるタッチでお任せ制作します。
+          </p>
+        </section>
+
+        <!-- STEP 1 ナビゲーション -->
+        <div class="pt-1">
+          <button type="button" onclick="nextStep(1)" class="accent-btn w-full py-4 rounded-2xl font-bold text-base shadow-md flex items-center justify-center gap-2">
+            <span>次へ進む（制作内容・写真の入力）</span>
+            <span>→</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- ================================================== -->
+      <!-- STEP 2: 制作内容・お写真の添付 -->
+      <!-- ================================================== -->
+      <div id="step2" class="step-panel hidden space-y-4 animate-in">
+        <!-- 木製キーホルダー単体選択時のみ：最初にオプションを選んでもらう -->
+        <section id="physicalOptionFirstSection" class="hidden wood-card rounded-3xl p-5 space-y-3 animate-in">
+          <div class="border-b border-[#EFE7D8] pb-3">
+            <div class="flex items-center gap-2.5">
+              <span class="bg-[#8C5535] text-white text-xs font-bold px-3 py-1 rounded-full">オプション（任意）</span>
+              <h2 class="font-bold text-base text-[#4A3930]">キーホルダー オプションを選択</h2>
+            </div>
+            <p class="text-xs text-[#7D6659] mt-1.5">※オプションなしの場合は、そのまま下の表面イラスト添付へお進みください。</p>
+          </div>
+
+          <div class="space-y-2.5">
+            <label class="select-card flex items-center justify-between gap-3 rounded-2xl p-3.5 cursor-pointer">
+              <input type="checkbox" name="physicalOption" value="金具パーツ付け替え" data-price="200" class="sr-only">
+              <div class="flex items-center gap-3">
+                <div class="check-indicator">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                </div>
+                <span class="text-sm font-medium">金具（根元パーツ）の付け替え</span>
+              </div>
+              <span class="text-xs font-bold text-[#8C5535] shrink-0">+200円</span>
+            </label>
+
+            <label class="select-card flex items-center justify-between gap-3 rounded-2xl p-3.5 cursor-pointer">
+              <input type="checkbox" name="physicalOption" value="裏面メッセージ・文字刻印追加" data-price="500" class="sr-only">
+              <div class="flex items-center gap-3">
+                <div class="check-indicator">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                </div>
+                <span class="text-sm font-medium">裏面メッセージ・文字刻印追加（名前・日付・背番号等）</span>
+              </div>
+              <span class="text-xs font-bold text-[#8C5535] shrink-0">+500円</span>
+            </label>
+
+            <label class="select-card flex items-center justify-between gap-3 rounded-2xl p-3.5 cursor-pointer">
+              <input type="checkbox" name="physicalOption" value="プレゼント包装" data-price="300" class="sr-only">
+              <div class="flex items-center gap-3">
+                <div class="check-indicator">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                </div>
+                <span class="text-sm font-medium">プレゼント包装</span>
+              </div>
+              <span class="text-xs font-bold text-[#8C5535] shrink-0">+300円</span>
+            </label>
+          </div>
+        </section>
+
+        <section id="contentSection" class="wood-card rounded-3xl p-5 space-y-4">
+          <div class="flex items-center gap-2.5 border-b border-[#EFE7D8] pb-3">
+            <span class="bg-[#C86D51] text-white text-xs font-bold px-3 py-1 rounded-full">STEP 2 / 4</span>
+            <h2 id="contentSectionTitle" class="font-bold text-base text-[#4A3930]">制作内容・お写真の添付</h2>
+          </div>
+
+          <!-- A: 木製キーホルダー単体用（「裏面メッセージ・文字刻印追加」チェック時のみ表示） -->
+          <div id="physicalFields" class="hidden space-y-3 animate-in">
+            <div>
+              <label for="physicalBacksideText" class="block text-sm font-bold mb-1">裏面に刻印する文字・日付・背番号 <span class="text-[#C86D51]">*</span></label>
+              <p class="text-xs text-[#7D6659] mb-2">例）TANUCHI / 2026.11.22 / 背番号 #96 / いつもありがとう</p>
+              <textarea id="physicalBacksideText" rows="3" placeholder="裏面に刻印したいお名前、日付、背番号、メッセージなどをご記入ください" class="form-input"></textarea>
+            </div>
+          </div>
+
+          <!-- B: SNS・LINEアイコン オリジナルキャラクター用入力欄 -->
+          <div id="iconFields" class="hidden space-y-3">
+            <div class="bg-[#FDF6F3] border border-[#EBC9BC] rounded-2xl p-3.5 text-xs text-[#5C3D2E] space-y-2 leading-relaxed">
+              <div>
+                <p class="font-bold text-[#C86D51] mb-0.5">🎨 画風・タッチについて（クリエイターお任せ）</p>
+                <p>
+                  送っていただいたお写真の特徴を見て、担当のクリエイターが最も魅力的に見えるタッチ（ゆるかわ、シンプル、漫画風など）をセレクトして制作します。「どんな風になるか」も楽しみにお待ちください♪<br>
+                  <span class="text-[11px] text-[#7D6659]">※画風の指定はできません</span>
+                </p>
+              </div>
+              <div class="pt-2 border-t border-[#EBC9BC]">
+                <p class="font-bold text-[#C86D51] mb-0.5">📸 お写真について（多いほどそっくりになります！）</p>
+                <p>
+                  キャラクターにしたい人物やペットのお写真をお送りください。できれば<strong>「全身正面・全身左右横向き・全身後ろ向き・胸上正面・胸上左右横向き・胸上後ろ向き」</strong>など、複数アングルがあるほどご本人・ペットに近い仕上がりになります。
+                </p>
+              </div>
+            </div>
+            <div>
+              <label class="block text-sm font-bold mb-1">キャラクターにしたい対象・服装・特徴の希望</label>
+              <textarea id="iconDetailText" rows="3" placeholder="例）息子のバスケユニフォーム姿（背番号96）で、お団子ヘアとインナーカラーを残してほしいです。" class="form-input"></textarea>
+            </div>
+          </div>
+
+          <!-- 共通：画像アップロード -->
+          <div id="imageUploadBlock" class="pt-3 border-t border-dashed border-[#DFD3BE]">
+            <label id="imageLabel" class="block text-sm font-bold mb-1">参考写真・イラストの添付</label>
+            <p id="imageHelpText" class="text-xs text-[#7D6659] mb-2.5 leading-relaxed">※複数枚ある場合はまとめて選択してください（最大8枚）</p>
+
+            <label for="imageInput" class="flex flex-col items-center justify-center w-full border-2 border-dashed border-[#D5C5AD] hover:border-[#C86D51] bg-[#FAF6EE] hover:bg-[#FDF6F3] rounded-2xl py-5 px-4 cursor-pointer transition text-center">
+              <span class="text-2xl mb-1">📷</span>
+              <span class="text-sm font-bold text-[#5C3D2E]">タップして写真・画像を選ぶ</span>
+              <span id="imageCountHint" class="text-[11px] text-[#7D6659] mt-1">スマホのアルバムから選択できます（複数選択OK）</span>
+              <input type="file" id="imageInput" accept="image/*" multiple class="hidden" />
+            </label>
+
+            <div id="imagePreviewHeader" class="hidden mt-3 flex items-center justify-between">
+              <span id="imageSelectedCount" class="text-xs font-bold text-[#8C5535]">0枚選択中</span>
+              <button type="button" onclick="clearImages()" class="text-xs text-[#C86D51] font-bold underline">選択をクリア</button>
+            </div>
+            <div id="imagePreviewWrap" class="hidden mt-2 grid grid-cols-3 sm:grid-cols-4 gap-2"></div>
+          </div>
+
+          <!-- C: オリジナルLINEスタンプ ヒアリング項目（写真アップロードの後に表示） -->
+          <div id="stampFields" class="hidden space-y-3.5 pt-4 border-t border-dashed border-[#DFD3BE]">
+            <div class="flex items-center gap-2">
+              <span class="bg-[#8C5535] text-white text-[11px] font-bold px-2.5 py-0.5 rounded-full">LINEスタンプ</span>
+              <h3 class="font-bold text-sm text-[#4A3930]">スタンプの内容をご指定ください</h3>
+            </div>
+            <p class="text-xs text-[#6B584C] bg-[#F8F4EC] p-3.5 rounded-2xl leading-relaxed">
+              上記のお写真から作成したオリジナルキャラクターのタッチをそのまま活かしてスタンプを制作します。以下のご希望をお選びください（送信後、公式LINEにて最終確認を行います）。
+            </p>
+
+            <div>
+              <label class="block text-xs font-bold mb-1.5 text-[#5C3D2E]">① 主にどんな相手・場面で使いますか？</label>
+              <select id="stampTarget" class="form-input">
+                <option value="家族・ママ友・親戚との日常連絡">家族・ママ友・親戚との日常連絡</option>
+                <option value="仲の良い友人・グループLINE">仲の良い友人・グループLINE</option>
+                <option value="スポーツチーム・部活・習い事仲間">スポーツチーム・部活・習い事仲間</option>
+                <option value="職場・仕事仲間・丁寧なやり取り">職場・仕事仲間・丁寧なやり取り</option>
+                <option value="カップル・夫婦間のやり取り">カップル・夫婦間のやり取り</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold mb-1.5 text-[#5C3D2E]">② セリフ（文字）の方向性</label>
+              <select id="stampTextTone" class="form-input">
+                <option value="日常挨拶おまかせ（おはよう・ありがとう・了解など）">日常挨拶おまかせ（おはよう・ありがとう・了解など）</option>
+                <option value="敬語メイン（ありがとうございます・お疲れ様です等）">敬語メイン（ありがとうございます・お疲れ様です等）</option>
+                <option value="元気・応援系（ナイス！・ファイト！・やったー！等）">元気・応援系（ナイス！・ファイト！・やったー！等）</option>
+                <option value="ゆるい・脱力系（りょ・おけ・眠い・ぺこり等）">ゆるい・脱力系（りょ・おけ・眠い・ぺこり等）</option>
+                <option value="文字なし（リアクションのみ）">文字なし（リアクションのみ）</option>
+              </select>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-bold mb-1.5 text-[#5C3D2E]">③ 文字のフォント・色の好み</label>
+                <select id="stampFont" class="form-input">
+                  <option value="ポップで丸みのある手書き風（カラフル）">ポップな丸文字・手書き風</option>
+                  <option value="くっきり読みやすい太ゴシック体">くっきり太ゴシック体</option>
+                  <option value="やさしいナチュラル手書き風">やさしい手書き風</option>
+                  <option value="お任せ">お任せ</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs font-bold mb-1.5 text-[#5C3D2E]">④ 動きや感情表現の強さ</label>
+                <select id="stampEmotion" class="form-input">
+                  <option value="標準（表情豊かで使いやすい）">標準（表情豊かで使いやすい）</option>
+                  <option value="大げさ・エフェクト多め（キラキラ・汗・炎など）">大げさ・エフェクト多め</option>
+                  <option value="控えめ・落ち着いた日常動作">控えめ・落ち着いた日常動作</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold mb-1.5 text-[#5C3D2E]">⑤ 絶対に残したい特徴・入れたいセリフ（任意）</label>
+              <textarea id="stampMustHave" rows="3" placeholder="例）セリフに「今日バスケ行く？」「ナイス！」を入れてほしいです。" class="form-input"></textarea>
+            </div>
+          </div>
+        </section>
+
+        <!-- STEP 2 ナビゲーション -->
+        <div class="grid grid-cols-3 gap-2.5 pt-1">
+          <button type="button" onclick="goToStep(1)" class="back-btn py-3.5 rounded-2xl font-bold text-sm">
+            ← 戻る
+          </button>
+          <button type="button" onclick="nextStep(2)" class="accent-btn col-span-2 py-3.5 rounded-2xl font-bold text-sm sm:text-base shadow-md">
+            <span id="step2NextBtnText">次へ進む（オプション） →</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- ================================================== -->
+      <!-- STEP 3: キーホルダー オプション選択（キーホルダー付きセット選択時のみ経由） -->
+      <!-- ================================================== -->
+      <div id="step3" class="step-panel hidden space-y-4 animate-in">
+        <div class="wood-card rounded-2xl p-3.5 text-center bg-[#FFFDF9]">
+          <p class="text-xs font-bold text-[#8C5535]">STEP 3 / 4：キーホルダー オプション（任意）</p>
+          <p class="text-[11px] text-[#7D6659] mt-0.5">※オプションなしの場合は、そのまま「次へ進む」を押してください。</p>
+        </div>
+
+        <!-- オプション選択 -->
+        <section id="optionSection" class="wood-card rounded-3xl p-5 space-y-3 animate-in">
+          <div class="border-b border-[#EFE7D8] pb-3">
+            <div class="flex items-center gap-2.5">
+              <span class="bg-[#8C5535] text-white text-xs font-bold px-3 py-1 rounded-full">オプション</span>
+              <h2 class="font-bold text-base text-[#4A3930]">キーホルダー オプション（任意）</h2>
+            </div>
+            <p class="text-xs text-[#7D6659] mt-1.5">
+              ※表面には作成したオリジナルキャラクターを刻印します。裏面に文字・日付・背番号等を入れたい場合は下記にチェックを入れてください。
+            </p>
+          </div>
+
+          <div class="space-y-2.5">
+            <label class="select-card flex items-center justify-between gap-3 rounded-2xl p-3.5 cursor-pointer">
+              <input type="checkbox" name="option" value="金具パーツ付け替え" data-price="200" class="sr-only">
+              <div class="flex items-center gap-3">
+                <div class="check-indicator">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                </div>
+                <span class="text-sm font-medium">金具（根元パーツ）の付け替え</span>
+              </div>
+              <span class="text-xs font-bold text-[#8C5535] shrink-0">+200円</span>
+            </label>
+
+            <label class="select-card flex items-center justify-between gap-3 rounded-2xl p-3.5 cursor-pointer">
+              <input type="checkbox" name="option" value="裏面メッセージ・文字刻印追加" data-price="500" class="sr-only">
+              <div class="flex items-center gap-3">
+                <div class="check-indicator">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                </div>
+                <span class="text-sm font-medium">裏面メッセージ・文字刻印追加（名前・日付・背番号等）</span>
+              </div>
+              <span class="text-xs font-bold text-[#8C5535] shrink-0">+500円</span>
+            </label>
+
+            <label class="select-card flex items-center justify-between gap-3 rounded-2xl p-3.5 cursor-pointer">
+              <input type="checkbox" name="option" value="プレゼント包装" data-price="300" class="sr-only">
+              <div class="flex items-center gap-3">
+                <div class="check-indicator">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                </div>
+                <span class="text-sm font-medium">プレゼント包装</span>
+              </div>
+              <span class="text-xs font-bold text-[#8C5535] shrink-0">+300円</span>
+            </label>
+          </div>
+        </section>
+
+        <!-- 「裏面メッセージ・文字刻印追加」にチェックを入れた時だけ開く裏面文字入力欄 -->
+        <section id="backsideEngraveSection" class="hidden wood-card rounded-3xl p-5 space-y-3 animate-in">
+          <div class="flex items-center gap-2.5 border-b border-[#EFE7D8] pb-3">
+            <span class="bg-[#C86D51] text-white text-xs font-bold px-3 py-1 rounded-full">裏面刻印内容</span>
+            <h2 class="font-bold text-base text-[#4A3930]">裏面に刻印する文字・日付・背番号</h2>
+          </div>
+          <div>
+            <label for="backsideEngraveText" class="block text-sm font-bold mb-1">裏面に入れる文字・メッセージ <span class="text-[#C86D51]">*</span></label>
+            <p class="text-xs text-[#7D6659] mb-2">例）TANUCHI / 2026.11.22 / 背番号 #96 / いつもありがとう</p>
+            <textarea id="backsideEngraveText" rows="3" placeholder="裏面に刻印したいお名前、日付、背番号、メッセージなどをご記入ください" class="form-input"></textarea>
+          </div>
+        </section>
+
+        <!-- STEP 3 ナビゲーション -->
+        <div class="grid grid-cols-3 gap-2.5 pt-1">
+          <button type="button" onclick="goToStep(2)" class="back-btn py-3.5 rounded-2xl font-bold text-sm">
+            ← 戻る
+          </button>
+          <button type="button" onclick="nextStep(3)" class="accent-btn col-span-2 py-3.5 rounded-2xl font-bold text-sm sm:text-base shadow-md">
+            次へ進む（お客様情報へ） →
+          </button>
+        </div>
+      </div>
+
+      <!-- ================================================== -->
+      <!-- STEP 4: お客様情報・最終確認 -->
+      <!-- ================================================== -->
+      <div id="step4" class="step-panel hidden space-y-4 animate-in">
+        <!-- ご注文内容の確認サマリー -->
+        <section class="wood-card rounded-3xl p-5 space-y-2.5 bg-[#FFFBF4]">
+          <div class="flex items-center justify-between border-b border-[#EFE7D8] pb-2.5">
+            <h2 class="font-bold text-sm text-[#8C5535]">📋 ご注文内容の確認</h2>
+            <button type="button" onclick="goToStep(1)" class="text-xs font-bold text-[#C86D51] underline">商品を変更</button>
+          </div>
+          <div class="text-xs space-y-1.5 text-[#5C3D2E]">
+            <p><span class="font-bold text-[#8C5535]">商品：</span><span id="confirmProduct">-</span></p>
+            <p><span class="font-bold text-[#8C5535]">オプション：</span><span id="confirmOptions">なし</span></p>
+            <p><span class="font-bold text-[#8C5535]">添付写真：</span><span id="confirmImageCount">0枚</span></p>
+            <p class="pt-1.5 border-t border-dashed border-[#DFD3BE] flex items-baseline justify-between">
+              <span class="font-bold text-[#8C5535]">お支払い合計（税込）：</span>
+              <span class="text-lg font-bold text-[#C86D51]"><span id="confirmTotal">0</span>円</span>
+            </p>
+          </div>
+        </section>
+
+        <!-- お客様情報入力 -->
+        <section class="wood-card rounded-3xl p-5 space-y-4">
+          <div class="flex items-center gap-2.5 border-b border-[#EFE7D8] pb-3">
+            <span class="bg-[#C86D51] text-white text-xs font-bold px-3 py-1 rounded-full">STEP 4 / 4</span>
+            <h2 id="customerSectionTitle" class="font-bold text-base text-[#4A3930]">お客様情報</h2>
+          </div>
+
+          <div>
+            <label for="lineName" class="block text-sm font-bold mb-1">LINEの登録名（表示名） <span class="text-[#C86D51]">*</span></label>
+            <p class="text-xs text-[#7D6659] mb-1.5">※LINE公式のトークと注文を照合するために必要です</p>
+            <input type="text" id="lineName" required placeholder="例：黒川 太一" class="form-input" />
+          </div>
+
+          <div>
+            <label for="customerName" class="block text-sm font-bold mb-1">お名前（フルネーム） <span class="text-[#C86D51]">*</span></label>
+            <input type="text" id="customerName" required placeholder="例：黒川 太一" class="form-input" />
+          </div>
+
+          <!-- 郵送が必要な商品（木製キーホルダー）のみ表示する住所欄 -->
+          <div id="shippingFields" class="hidden space-y-4 pt-3 border-t border-dashed border-[#DFD3BE] animate-in">
+            <p class="text-xs font-bold text-[#8C5535]">📮 キーホルダーのお届け先</p>
+            <div>
+              <label for="postalCode" class="block text-sm font-bold mb-1">郵便番号 <span class="text-[#C86D51]">*</span></label>
+              <input type="text" id="postalCode" inputmode="numeric" placeholder="例：276-0046" class="form-input" />
+            </div>
+
+            <div>
+              <label for="address" class="block text-sm font-bold mb-1">お届け先ご住所 <span class="text-[#C86D51]">*</span></label>
+              <input type="text" id="address" placeholder="例：千葉県八千代市〇〇 1-2-3" class="form-input" />
+            </div>
+
+            <div>
+              <label for="phone" class="block text-sm font-bold mb-1">お電話番号 <span class="text-[#C86D51]">*</span></label>
+              <input type="tel" id="phone" inputmode="tel" placeholder="例：090-1234-5678" class="form-input" />
+            </div>
+          </div>
+
+          <!-- お支払い方法（スマホで選びやすい2択カード） -->
+          <div class="pt-2">
+            <label class="block text-sm font-bold mb-2">お支払い方法 <span class="text-[#C86D51]">*</span></label>
+            <div class="grid grid-cols-2 gap-2.5">
+              <label class="select-card rounded-2xl p-3 cursor-pointer text-center">
+                <input type="radio" name="paymentMethod" value="PayPay送金" checked class="sr-only">
+                <span class="block text-sm font-bold text-[#4A3930]">PayPay送金</span>
+                <span class="block text-[11px] text-[#7D6659] mt-0.5">LINEにてご案内</span>
+              </label>
+              <label class="select-card rounded-2xl p-3 cursor-pointer text-center">
+                <input type="radio" name="paymentMethod" value="銀行振込" class="sr-only">
+                <span class="block text-sm font-bold text-[#4A3930]">銀行振込</span>
+                <span class="block text-[11px] text-[#7D6659] mt-0.5">LINEにてご案内</span>
+              </label>
+            </div>
+          </div>
+
+          <div>
+            <label for="notes" class="block text-sm font-bold mb-1">その他ご要望・ご質問（任意）</label>
+            <textarea id="notes" rows="2" placeholder="気になることやご希望があればお気軽にご記入ください" class="form-input"></textarea>
+          </div>
+        </section>
+
+        <!-- STEP 4 ナビゲーション＆送信ボタン -->
+        <div class="space-y-2.5 pt-1">
+          <button type="submit" id="submitBtn" class="accent-btn w-full py-4 rounded-2xl font-bold text-base shadow-md">
+            この内容で注文を送信する
+          </button>
+          <button type="button" onclick="backFromStep4()" class="back-btn w-full py-3 rounded-2xl font-bold text-sm">
+            ← 前の画面に戻る
+          </button>
+          <p class="text-[11px] text-[#7D6659] text-center pt-1">
+            ※この画面では決済は行われません。送信後、公式LINEにてお支払い案内をお送りします。
+          </p>
+        </div>
+      </div>
+
+    </form>
+  </main>
+
+  <!-- 下部固定：合計金額バー -->
+  <div class="fixed bottom-0 left-0 right-0 bg-[#FFFDF9]/95 backdrop-blur-md border-t border-[#DFD2BC] px-4 py-3 shadow-[0_-4px_16px_rgba(74,57,48,0.08)] z-40">
+    <div class="max-w-xl mx-auto flex items-center justify-between gap-3">
+      <div class="min-w-0">
+        <span id="selectedProductBar" class="text-xs font-bold text-[#5C3D2E] block truncate">商品を選択してください</span>
+        <span id="shippingNote" class="text-[11px] text-[#8C5535] block truncate">お支払い合計（税込）</span>
+      </div>
+      <div class="text-right shrink-0">
+        <span id="totalPrice" class="text-2xl font-bold text-[#C86D51] tracking-tight">0</span>
+        <span class="text-xs font-bold text-[#5C3D2E] ml-0.5">円</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 送信完了モーダル -->
+  <div id="completeModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+    <div class="wood-card rounded-3xl max-w-md w-full p-6 text-center space-y-4 animate-in">
+      <div class="w-16 h-16 rounded-full bg-[#F4EBDC] text-3xl flex items-center justify-center mx-auto">
+        🎉
+      </div>
+      <h3 class="text-xl font-bold text-[#5C3D2E]">ご注文を受け付けました！</h3>
+      <p class="text-sm text-[#6B584C] leading-relaxed">
+        ありがとうございます！注文データの送信が完了しました。<br>
+        <strong>公式LINEのトーク画面</strong>にお戻りいただき、お支払い方法や制作のご案内をお待ちください🌱
+      </p>
+      <div class="bg-[#F8F4EC] rounded-2xl p-4 text-left text-xs space-y-1.5 border border-[#E6DAC6]">
+        <p><span class="font-bold text-[#8C5535]">受付番号：</span><span id="modalOrderId" class="font-bold">-</span></p>
+        <p><span class="font-bold text-[#8C5535]">ご注文内容：</span><span id="modalProduct">-</span></p>
+        <p><span class="font-bold text-[#8C5535]">合計金額：</span><span id="modalTotal" class="font-bold text-[#C86D51]">-</span>円</p>
+      </div>
+      <button type="button" onclick="window.location.reload()" class="accent-btn w-full py-3.5 rounded-2xl font-bold text-sm">
+        閉じる
+      </button>
+    </div>
+  </div>
+
+  <!-- 制作事例 拡大表示モーダル（ライトボックス） -->
+  <div id="imageLightbox" onclick="closeLightbox()" class="hidden fixed inset-0 bg-black/75 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+    <div onclick="event.stopPropagation()" class="bg-white rounded-3xl max-w-2xl w-full p-4 space-y-3 shadow-2xl animate-in">
+      <div class="flex items-center justify-between gap-2 border-b border-[#EFE7D8] pb-2">
+        <p id="lightboxCaption" class="text-sm font-bold text-[#4A3930] truncate">制作事例</p>
+        <button type="button" onclick="closeLightbox()" class="w-8 h-8 rounded-full bg-[#F4EBDC] text-[#5C3D2E] font-bold flex items-center justify-center hover:bg-[#E6DAC6]">
+          ✕
+        </button>
+      </div>
+      <div class="bg-[#FAF6EE] rounded-2xl p-2 flex items-center justify-center max-h-[70vh] overflow-hidden">
+        <img id="lightboxImg" src="" alt="拡大プレビュー" class="max-h-[65vh] w-auto object-contain rounded-xl" />
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ==========================================
+    // ★ここにデプロイしたGASのウェブアプリURLを貼る
+    // ==========================================
+    const GAS_WEB_APP_URL = "YOUR_GAS_WEB_APP_URL_HERE";
+
+    const productRadios = document.querySelectorAll('input[name="product"]');
+    const stampCountRadios = document.querySelectorAll('input[name="stampCount"]');
+    const optionCheckboxes = document.querySelectorAll('input[name="option"]');
+    const physicalOptionCheckboxes = document.querySelectorAll('input[name="physicalOption"]');
+
+    const stampCountSection = document.getElementById('stampCountSection');
+    const stampCountTitle = document.getElementById('stampCountTitle');
+    const stampCountSubNote = document.getElementById('stampCountSubNote');
+    const sampleGallerySection = document.getElementById('sampleGallerySection');
+    const stampSampleBlock = document.getElementById('stampSampleBlock');
+    const charSampleBlock = document.getElementById('charSampleBlock');
+    const physicalOptionFirstSection = document.getElementById('physicalOptionFirstSection');
+    const optionSection = document.getElementById('optionSection');
+    const backsideEngraveSection = document.getElementById('backsideEngraveSection');
+    const customerSectionTitle = document.getElementById('customerSectionTitle');
+    const contentSectionTitle = document.getElementById('contentSectionTitle');
+    const step2NextBtnText = document.getElementById('step2NextBtnText');
+
+    const physicalFields = document.getElementById('physicalFields');
+    const iconFields = document.getElementById('iconFields');
+    const stampFields = document.getElementById('stampFields');
+    const imageUploadBlock = document.getElementById('imageUploadBlock');
+    const imageInput = document.getElementById('imageInput');
+    const imagePreviewHeader = document.getElementById('imagePreviewHeader');
+    const imageSelectedCount = document.getElementById('imageSelectedCount');
+    const imagePreviewWrap = document.getElementById('imagePreviewWrap');
+
+    const shippingFields = document.getElementById('shippingFields');
+    const totalPriceEl = document.getElementById('totalPrice');
+    const selectedProductBar = document.getElementById('selectedProductBar');
+    const shippingNoteEl = document.getElementById('shippingNote');
+    const formErrorBanner = document.getElementById('formErrorBanner');
+
+    let uploadedImages = [];
+    let currentStep = 1;
+    let maxReachedStep = 1;
+
+    // ステップ切り替え表示＆プログレスバー更新
+    function goToStep(stepNum) {
+      hideFormError();
+      currentStep = stepNum;
+      if (stepNum > maxReachedStep) maxReachedStep = stepNum;
+
+      document.querySelectorAll('.step-panel').forEach((panel, idx) => {
+        if (idx + 1 === stepNum) {
+          panel.classList.remove('hidden');
+        } else {
+          panel.classList.add('hidden');
+        }
+      });
+
+      // プログレスバーの見た目更新
+      const stepItems = document.querySelectorAll('.step-item');
+      stepItems.forEach((item) => {
+        const s = Number(item.dataset.step);
+        const dot = item.querySelector('.step-dot');
+        item.classList.remove('is-active', 'is-done');
+        if (s < stepNum) {
+          item.classList.add('is-done');
+          dot.textContent = "✓";
+        } else if (s === stepNum) {
+          item.classList.add('is-active');
+          dot.textContent = String(s);
+        } else {
+          dot.textContent = String(s);
+        }
+      });
+
+      const fillPercent = ((stepNum - 1) / 3) * 100;
+      document.getElementById('progressLineFill').style.width = `${fillPercent}%`;
+
+      if (stepNum === 4) {
+        updateConfirmBox();
+      }
+
+      // 画面上部（プログレスバー付近）へスムーズにスクロール
+      const headerHeight = document.querySelector('header').offsetHeight;
+      window.scrollTo({ top: Math.max(0, headerHeight - 8), behavior: 'smooth' });
+    }
+
+    // 上部のプログレスバーをタップした時のジャンプ制御
+    function tryJumpStep(targetStep) {
+      if (targetStep === currentStep) return;
+      if (targetStep < currentStep) {
+        goToStep(targetStep);
+        return;
+      }
+      if (targetStep <= maxReachedStep) {
+        if (validateStep(currentStep)) {
+          goToStep(targetStep);
+        }
+      }
+    }
+
+    // 各ステップの入力チェック
+    function validateStep(stepNum) {
+      hideFormError();
+      const selectedProduct = document.querySelector('input[name="product"]:checked');
+
+      if (stepNum === 1) {
+        if (!selectedProduct) {
+          showFormError("まずはご希望の商品を選択してください。");
+          return false;
+        }
+        return true;
+      }
+
+      if (stepNum === 2) {
+        const productType = selectedProduct ? selectedProduct.dataset.type : "";
+        if ((productType === 'stamp_new' || productType === 'stamp_keyholder') && uploadedImages.length === 0) {
+          showFormError("キャラクターにしたい人物・ペットのお写真を1枚以上添付してください。");
+          return false;
+        }
+        return true;
+      }
+
+      return true;
+    }
+
+    // 「次へ進む」ボタン押下時
+    function nextStep(fromStep) {
+      if (!validateStep(fromStep)) return;
+      updateSummary();
+      const selectedProduct = document.querySelector('input[name="product"]:checked');
+      const productType = selectedProduct ? selectedProduct.dataset.type : "";
+      // STEP 3（キーホルダーオプション）が必要なのは「キャラ＋キーホルダー(icon_keyholder)」と「3点セット(stamp_keyholder)」のみ
+      if (fromStep === 2 && productType !== 'icon_keyholder' && productType !== 'stamp_keyholder') {
+        goToStep(4);
+        return;
+      }
+      goToStep(fromStep + 1);
+    }
+
+    // STEP 4から戻るボタン押下時
+    function backFromStep4() {
+      const selectedProduct = document.querySelector('input[name="product"]:checked');
+      const productType = selectedProduct ? selectedProduct.dataset.type : "";
+      if (productType === 'icon_keyholder' || productType === 'stamp_keyholder') {
+        goToStep(3);
+      } else {
+        goToStep(2);
+      }
+    }
+
+    // 選択中のオプション一覧を取得するヘルパー
+    function getSelectedOptionNames() {
+      const selectedProduct = document.querySelector('input[name="product"]:checked');
+      const productType = selectedProduct ? selectedProduct.dataset.type : "";
+      const targetCheckboxes = (productType === 'physical') ? physicalOptionCheckboxes : optionCheckboxes;
+      return Array.from(targetCheckboxes)
+        .filter(cb => cb.checked)
+        .map(cb => cb.value);
+    }
+
+    // STEP 4 の注文確認ボックスを更新
+    function updateConfirmBox() {
+      const selectedOptions = getSelectedOptionNames();
+      document.getElementById('confirmProduct').textContent = selectedProductBar.textContent;
+      document.getElementById('confirmOptions').textContent = selectedOptions.length > 0 ? selectedOptions.join(" / ") : "なし";
+      document.getElementById('confirmImageCount').textContent = uploadedImages.length > 0 ? `${uploadedImages.length}枚添付済み` : "なし（あとからLINEで送付）";
+      document.getElementById('confirmTotal').textContent = totalPriceEl.textContent;
+    }
+
+    // 選択した画像をクリア
+    function clearImages() {
+      uploadedImages = [];
+      imageInput.value = "";
+      imagePreviewWrap.innerHTML = "";
+      imagePreviewWrap.classList.add('hidden');
+      imagePreviewHeader.classList.add('hidden');
+    }
+
+    // エラーバナー表示ヘルパー
+    function showFormError(message) {
+      formErrorBanner.textContent = "⚠️ " + message;
+      formErrorBanner.classList.remove('hidden');
+      formErrorBanner.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    function hideFormError() {
+      formErrorBanner.classList.add('hidden');
+    }
+
+    // 制作事例の拡大プレビュー開閉
+    function openLightbox(src, caption) {
+      const modal = document.getElementById('imageLightbox');
+      document.getElementById('lightboxImg').src = src;
+      document.getElementById('lightboxCaption').textContent = caption;
+      modal.classList.remove('hidden');
+    }
+
+    function closeLightbox() {
+      document.getElementById('imageLightbox').classList.add('hidden');
+    }
+
+    // 合計金額と入力フォームの動的切り替え
+    function updateSummary() {
+      hideFormError();
+      const selectedProduct = document.querySelector('input[name="product"]:checked');
+
+      if (!selectedProduct) {
+        stampCountSection.classList.add('hidden');
+        sampleGallerySection.classList.add('hidden');
+        stampSampleBlock.classList.add('hidden');
+        charSampleBlock.classList.add('hidden');
+        physicalOptionFirstSection.classList.add('hidden');
+        backsideEngraveSection.classList.add('hidden');
+        shippingFields.classList.add('hidden');
+        totalPriceEl.textContent = "0";
+        selectedProductBar.textContent = "商品を選択してください";
+        shippingNoteEl.textContent = "お支払い合計（税込）";
+        return;
+      }
+
+      let productPrice = Number(selectedProduct.dataset.price || 0);
+      const shippingPrice = Number(selectedProduct.dataset.shipping || 0);
+      const productType = selectedProduct.dataset.type || 'physical';
+      const isBasePhysical = (productType === 'physical');
+      const hasKeyholder = (selectedProduct.dataset.hasKeyholder === 'true');
+      const isStampMenu = (productType === 'stamp_new' || productType === 'stamp_keyholder');
+      let barProductName = selectedProduct.value;
+
+      // スタンプ選択時の個数・価格更新（3点セットの場合は＋1,200円を自動加算して表示）
+      if (isStampMenu) {
+        stampCountSection.classList.remove('hidden');
+        const is3Set = (productType === 'stamp_keyholder');
+        const keyholderAddon = is3Set ? 1200 : 0;
+
+        if (is3Set) {
+          stampCountTitle.textContent = "3点セットのLINEスタンプ個数を選んでください";
+          stampCountSubNote.textContent = "※「オリジナルキャラ（無料）＋LINEスタンプ＋木製キーホルダー（1,200円）」の3点セット合計金額です（別途送料200円）。";
+        } else {
+          stampCountTitle.textContent = "2点セットのLINEスタンプ個数を選んでください";
+          stampCountSubNote.textContent = "※「オリジナルキャラ（500円→無料）＋LINEスタンプ」の2点セット合計金額です。";
+        }
+
+        [8, 16, 32, 40].forEach(num => {
+          const radio = document.querySelector(`input[name="stampCount"][value="${num}個セット"]`);
+          const baseP = Number(radio.dataset.stampPrice);
+          const origP = Number(radio.dataset.stampOrig);
+          document.getElementById(`stampPrice${num}`).textContent = `セット計 ${(baseP + keyholderAddon).toLocaleString()}円`;
+          document.getElementById(`stampOrig${num}`).textContent = `${(origP + keyholderAddon).toLocaleString()}円`;
+        });
+
+        const selectedCount = document.querySelector('input[name="stampCount"]:checked');
+        const countLabel = selectedCount ? selectedCount.value : '8個セット';
+        const stampBasePrice = selectedCount ? Number(selectedCount.dataset.stampPrice || 2480) : 2480;
+
+        productPrice = stampBasePrice + keyholderAddon;
+        barProductName = is3Set
+          ? `オリジナルキャラ＋LINEスタンプ（${countLabel}）＋木製キーホルダー`
+          : `オリジナルキャラ＋LINEスタンプ（${countLabel}）`;
+      } else {
+        stampCountSection.classList.add('hidden');
+      }
+
+      // 選んだ商品に応じた制作事例ギャラリーの出し分け
+      if (productType === 'icon' || productType === 'icon_keyholder') {
+        sampleGallerySection.classList.remove('hidden');
+        stampSampleBlock.classList.add('hidden');
+        charSampleBlock.classList.remove('hidden');
+      } else if (isStampMenu) {
+        sampleGallerySection.classList.remove('hidden');
+        stampSampleBlock.classList.remove('hidden');
+        charSampleBlock.classList.remove('hidden');
+      } else {
+        sampleGallerySection.classList.add('hidden');
+        stampSampleBlock.classList.add('hidden');
+        charSampleBlock.classList.add('hidden');
+      }
+
+      // オプション欄の制御
+      if (isBasePhysical) {
+        physicalOptionFirstSection.classList.remove('hidden');
+        optionCheckboxes.forEach(cb => cb.checked = false);
+        step2NextBtnText.textContent = "次へ進む（お客様情報へ） →";
+      } else {
+        physicalOptionFirstSection.classList.add('hidden');
+        physicalOptionCheckboxes.forEach(cb => cb.checked = false);
+        if (hasKeyholder) {
+          step2NextBtnText.textContent = "次へ進む（キーホルダーオプション） →";
+        } else {
+          optionCheckboxes.forEach(cb => cb.checked = false);
+          step2NextBtnText.textContent = "次へ進む（お客様情報へ） →";
+        }
+      }
+
+      // 「裏面メッセージ・文字刻印追加」が選択されている場合のみ裏面文字入力欄を表示
+      const isPhysicalBacksideChecked = Array.from(physicalOptionCheckboxes).some(
+        cb => cb.value === '裏面メッセージ・文字刻印追加' && cb.checked
+      );
+      const isStep3BacksideChecked = Array.from(optionCheckboxes).some(
+        cb => cb.value === '裏面メッセージ・文字刻印追加' && cb.checked
+      );
+
+      if (hasKeyholder && !isBasePhysical && isStep3BacksideChecked) {
+        backsideEngraveSection.classList.remove('hidden');
+      } else {
+        backsideEngraveSection.classList.add('hidden');
+      }
+
+      // 商品タイプ別の制作内容入力欄切り替え
+      physicalFields.classList.add('hidden');
+      iconFields.classList.add('hidden');
+      stampFields.classList.add('hidden');
+
+      if (productType === 'physical') {
+        contentSectionTitle.textContent = "表面のイラスト・お絵かき添付";
+        imageUploadBlock.classList.remove('pt-3', 'border-t', 'border-dashed', 'border-[#DFD3BE]');
+        if (isPhysicalBacksideChecked) {
+          physicalFields.classList.remove('hidden');
+          imageUploadBlock.classList.add('pt-3', 'border-t', 'border-dashed', 'border-[#DFD3BE]');
+        }
+        imageLabel.innerHTML = '表面に刻印するお絵かき・ロゴ・イラストを添付 <span class="text-[#C86D51]">*</span>';
+        imageHelpText.textContent = "※白い紙に黒ペンで描いた絵、または刻印したいロゴ・イラスト画像をお選びください（後からLINEで送ることも可能です）";
+      } else if (productType === 'icon' || productType === 'icon_keyholder') {
+        contentSectionTitle.textContent = "キャラクター制作の希望・お写真";
+        iconFields.classList.remove('hidden');
+        imageUploadBlock.classList.add('pt-3', 'border-t', 'border-dashed', 'border-[#DFD3BE]');
+        imageLabel.innerHTML = '人物・ペットのお写真（複数枚OK）';
+        imageHelpText.textContent = "※全身正面・左右横向き・後ろ向き・胸上など、写真が多いほどご本人・ペットに近づきます！（後からLINEで送ることも可能です）";
+      } else if (isStampMenu) {
+        contentSectionTitle.textContent = "キャラクター制作 ＆ スタンプヒアリング";
+        iconFields.classList.remove('hidden');
+        stampFields.classList.remove('hidden');
+        imageUploadBlock.classList.add('pt-3', 'border-t', 'border-dashed', 'border-[#DFD3BE]');
+        imageLabel.innerHTML = '人物・ペットのお写真を添付（複数枚OK） <span class="text-[#C86D51]">*</span>';
+        imageHelpText.textContent = "※全身正面・左右横向き・後ろ向き・胸上など、写真が多いほどそっくりに仕上がります！";
+      }
+
+      // オプション合計計算
+      let optionsTotal = 0;
+      const activeOptionCheckboxes = isBasePhysical ? physicalOptionCheckboxes : optionCheckboxes;
+      activeOptionCheckboxes.forEach(cb => {
+        if (cb.checked) optionsTotal += Number(cb.dataset.price || 0);
+      });
+
+      const total = productPrice + optionsTotal + shippingPrice;
+      totalPriceEl.textContent = total.toLocaleString();
+      selectedProductBar.textContent = barProductName;
+
+      // 住所欄の表示切り替え
+      if (hasKeyholder) {
+        shippingNoteEl.textContent = optionsTotal > 0
+          ? `オプション +${optionsTotal.toLocaleString()}円 / 送料 ${shippingPrice}円 込み`
+          : `送料 ${shippingPrice}円 込み（税込）`;
+        customerSectionTitle.textContent = "お客様情報・お届け先";
+        shippingFields.classList.remove('hidden');
+      } else {
+        shippingNoteEl.textContent = isStampMenu
+          ? "LINEにてご案内（※別途DL時190円）"
+          : "LINEにて画像データをお届け（税込）";
+        customerSectionTitle.textContent = "お客様情報";
+        shippingFields.classList.add('hidden');
+      }
+
+      if (currentStep === 4) {
+        updateConfirmBox();
+      }
+    }
+
+    productRadios.forEach(r => r.addEventListener('change', updateSummary));
+    stampCountRadios.forEach(r => r.addEventListener('change', updateSummary));
+    optionCheckboxes.forEach(c => c.addEventListener('change', updateSummary));
+    physicalOptionCheckboxes.forEach(c => c.addEventListener('change', updateSummary));
+
+    // 画像選択＆プレビュー処理（複数枚対応・最大8枚）
+    imageInput.addEventListener('change', async (e) => {
+      const files = Array.from(e.target.files || []).slice(0, 8);
+      if (files.length === 0) return;
+
+      uploadedImages = [];
+      imagePreviewWrap.innerHTML = "";
+      imagePreviewHeader.classList.remove('hidden');
+      imagePreviewWrap.classList.remove('hidden');
+      imageSelectedCount.textContent = `${files.length}枚選択中`;
+
+      for (const file of files) {
+        try {
+          const dataUrl = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+              const img = new Image();
+              img.onload = () => {
+                const canvas = document.createElement('canvas');
+                const MAX_WIDTH = 1200;
+                let width = img.width;
+                let height = img.height;
+                if (width > MAX_WIDTH) {
+                  height *= MAX_WIDTH / width;
+                  width = MAX_WIDTH;
+                }
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+                resolve(canvas.toDataURL('image/jpeg', 0.8));
+              };
+              img.onerror = reject;
+              img.src = event.target.result;
+            };
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+          });
+
+          uploadedImages.push({ name: file.name, data: dataUrl });
+          const imgEl = document.createElement('img');
+          imgEl.src = dataUrl;
+          imgEl.alt = "選択した画像プレビュー";
+          imgEl.className = "w-full h-20 sm:h-24 object-cover rounded-xl border border-[#DFD3BE] shadow-xs";
+          imagePreviewWrap.appendChild(imgEl);
+        } catch (err) {
+          console.error("画像読み込みエラー:", err);
+        }
+      }
+    });
+
+    // フォーム送信処理
+    document.getElementById('orderForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      hideFormError();
+
+      const selectedProduct = document.querySelector('input[name="product"]:checked');
+      if (!selectedProduct) {
+        showFormError("STEP 1でご希望の商品を選択してください。");
+        return;
+      }
+
+      const productType = selectedProduct.dataset.type || "";
+      const hasKeyholder = (selectedProduct.dataset.hasKeyholder === 'true');
+      const isStampMenu = (productType === 'stamp_new' || productType === 'stamp_keyholder');
+
+      const lineName = document.getElementById('lineName').value.trim();
+      const customerName = document.getElementById('customerName').value.trim();
+      const postalCode = document.getElementById('postalCode').value.trim();
+      const address = document.getElementById('address').value.trim();
+      const phone = document.getElementById('phone').value.trim();
+      const paymentRadio = document.querySelector('input[name="paymentMethod"]:checked');
+      const paymentMethod = paymentRadio ? paymentRadio.value : "PayPay送金";
+
+      // バリデーションチェック
+      if (isStampMenu && uploadedImages.length === 0) {
+        showFormError("キャラクターにしたい人物・ペットのお写真を添付してください。");
+        return;
+      }
+      if (!lineName) {
+        showFormError("LINEの登録名（表示名）をご入力ください。");
+        return;
+      }
+      if (!customerName) {
+        showFormError("お名前（フルネーム）をご入力ください。");
+        return;
+      }
+      if (hasKeyholder && (!postalCode || !address || !phone)) {
+        showFormError("キーホルダーのお届け先（郵便番号・ご住所・お電話番号）をご入力ください。");
+        return;
+      }
+
+      const submitBtn = document.getElementById('submitBtn');
+      submitBtn.disabled = true;
+      submitBtn.textContent = "送信中...（画像がある場合は数秒かかります）";
+
+      const selectedOptions = getSelectedOptionNames();
+
+      // 商品タイプに応じた詳細テキストの組み立て
+      let detailSummary = "";
+      let finalProductName = selectedProduct.value;
+      const backsideEngraveVal = (productType === 'physical')
+        ? document.getElementById('physicalBacksideText').value.trim()
+        : document.getElementById('backsideEngraveText').value.trim();
+      const isBacksideSelected = selectedOptions.includes("裏面メッセージ・文字刻印追加");
+      const backsideNote = isBacksideSelected
+        ? `\n\n【裏面刻印（名前・日付・背番号等）】${backsideEngraveVal || '（LINEにて確認）'}`
+        : "";
+
+      if (productType === 'physical') {
+        detailSummary = `【表面】添付のお絵かき・ロゴ画像を刻印${backsideNote}`;
+      } else if (productType === 'icon') {
+        detailSummary = "【キャラ要望】" + document.getElementById('iconDetailText').value.trim();
+      } else if (productType === 'icon_keyholder') {
+        detailSummary = `【キャラ要望】${document.getElementById('iconDetailText').value.trim()}\n\n【キーホルダー表面】作成したオリジナルキャラクター${backsideNote}`;
+      } else if (isStampMenu) {
+        const selectedCount = document.querySelector('input[name="stampCount"]:checked');
+        const countLabel = selectedCount ? selectedCount.value : '8個セット';
+
+        finalProductName = (productType === 'stamp_keyholder')
+          ? `オリジナルキャラ＋LINEスタンプ（${countLabel}）＋木製キーホルダー`
+          : `オリジナルキャラ＋LINEスタンプ（${countLabel}）`;
+
+        const stampSummary = [
+          `①用途: ${document.getElementById('stampTarget').value}`,
+          `②セリフ方針: ${document.getElementById('stampTextTone').value}`,
+          `③フォント: ${document.getElementById('stampFont').value}`,
+          `④感情表現: ${document.getElementById('stampEmotion').value}`,
+          `⑤残したい特徴・要望: ${document.getElementById('stampMustHave').value.trim() || '特になし'}`
+        ].join("\n");
+
+        detailSummary = `【キャラ要望】${document.getElementById('iconDetailText').value.trim()}\n\n${stampSummary}`;
+        if (productType === 'stamp_keyholder') {
+          detailSummary += `\n\n【キーホルダー表面】作成したオリジナルキャラクター${backsideNote}`;
+        }
+      }
+
+      const payload = {
+        action: "createOrder",
+        lineName: lineName,
+        customerName: customerName,
+        product: finalProductName,
+        options: selectedOptions.join(" / ") || "なし",
+        totalPrice: Number(totalPriceEl.textContent.replace(/,/g, '')),
+        engraveText: detailSummary,
+        postalCode: hasKeyholder ? postalCode : "",
+        address: hasKeyholder ? address : "",
+        phone: hasKeyholder ? phone : "",
+        paymentMethod: paymentMethod,
+        notes: document.getElementById('notes').value.trim(),
+        images: uploadedImages,
+        imageData: uploadedImages.length > 0 ? uploadedImages[0].data : "",
+        imageName: uploadedImages.length > 0 ? uploadedImages[0].name : ""
+      };
+
+      try {
+        if (GAS_WEB_APP_URL === "YOUR_GAS_WEB_APP_URL_HERE") {
+          // テストモード（GAS未接続時の動作確認用）
+          await new Promise(r => setTimeout(r, 700));
+          document.getElementById('modalOrderId').textContent = "TEST-" + Math.floor(1000 + Math.random() * 9000);
+          document.getElementById('modalProduct').textContent = payload.product;
+          document.getElementById('modalTotal').textContent = payload.totalPrice.toLocaleString();
+          document.getElementById('completeModal').classList.remove('hidden');
+          return;
+        }
+
+        const response = await fetch(GAS_WEB_APP_URL, {
+          method: "POST",
+          body: JSON.stringify(payload)
+        });
+        const result = await response.json();
+
+        if (result.status === "success") {
+          document.getElementById('modalOrderId').textContent = result.orderId;
+          document.getElementById('modalProduct').textContent = payload.product;
+          document.getElementById('modalTotal').textContent = payload.totalPrice.toLocaleString();
+          document.getElementById('completeModal').classList.remove('hidden');
+        } else {
+          throw new Error(result.message || "送信エラー");
+        }
+      } catch (err) {
+        showFormError("送信に失敗しました。通信環境をご確認のうえ再度お試しください。（" + err.message + "）");
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = "この内容で注文を送信する";
+      }
+    });
+  </script>
+</body>
+</html>
