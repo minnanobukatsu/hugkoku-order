@@ -81,6 +81,7 @@
         <button onclick="filterOrders('制作中')" class="filter-btn bg-white border border-[#DFD3BE] text-xs font-bold px-3 py-1.5 rounded-full">制作中</button>
         <button onclick="filterOrders('刻印・完成')" class="filter-btn bg-white border border-[#DFD3BE] text-xs font-bold px-3 py-1.5 rounded-full">刻印・完成</button>
         <button onclick="filterOrders('発送・納品済')" class="filter-btn bg-white border border-[#DFD3BE] text-xs font-bold px-3 py-1.5 rounded-full">発送・納品済</button>
+        <button onclick="filterOrders('キャンセル')" class="filter-btn bg-white border border-[#DFD3BE] text-xs font-bold px-3 py-1.5 rounded-full">キャンセル</button>
       </div>
 
       <!-- 注文一覧 -->
@@ -147,10 +148,11 @@
     }
 
     function updateStats() {
-      document.getElementById('statTotalCount').textContent = allOrders.length;
-      const active = allOrders.filter(o => o.status !== '発送・納品済').length;
-      const unpaid = allOrders.filter(o => o.status === '未入金').length;
-      const sales = allOrders.reduce((sum, o) => sum + Number(o.totalPrice || 0), 0);
+      const validOrders = allOrders.filter(o => o.status !== 'キャンセル');
+      document.getElementById('statTotalCount').textContent = validOrders.length;
+      const active = validOrders.filter(o => o.status !== '発送・納品済').length;
+      const unpaid = validOrders.filter(o => o.status === '未入金').length;
+      const sales = validOrders.reduce((sum, o) => sum + Number(o.totalPrice || 0), 0);
 
       document.getElementById('statActiveCount').textContent = active;
       document.getElementById('statUnpaidCount').textContent = unpaid;
@@ -185,8 +187,11 @@
           "未入金": "bg-amber-100 text-amber-800 border-amber-300",
           "制作中": "bg-blue-100 text-blue-800 border-blue-300",
           "刻印・完成": "bg-purple-100 text-purple-800 border-purple-300",
-          "発送・納品済": "bg-green-100 text-green-800 border-green-300"
+          "発送・納品済": "bg-green-100 text-green-800 border-green-300",
+          "キャンセル": "bg-gray-200 text-gray-600 border-gray-300"
         }[order.status] || "bg-gray-100 text-gray-800";
+
+        const isCanceled = order.status === 'キャンセル';
 
         // 複数枚の画像URL（改行区切り）を1枚ずつのリンクボタンに変換
         const imageLinks = String(order.imageUrl || "")
@@ -195,12 +200,12 @@
           .filter(Boolean);
 
         return `
-          <div class="wood-card rounded-2xl p-5 space-y-3 shadow-sm">
+          <div class="wood-card rounded-2xl p-5 space-y-3 shadow-sm ${isCanceled ? 'opacity-65 bg-gray-50' : ''}">
             <div class="flex flex-wrap items-center justify-between gap-2 border-b border-[#EFE7D8] pb-3">
               <div>
                 <span class="text-xs font-bold text-[#8C583A]">${order.orderId}</span>
                 <span class="text-xs text-[#7D6659] ml-2">${order.createdAt}</span>
-                <h3 class="font-bold text-base mt-0.5">
+                <h3 class="font-bold text-base mt-0.5 ${isCanceled ? 'line-through text-gray-500' : ''}">
                   LINE名：${order.lineName} <span class="text-xs font-normal text-[#7D6659]">（本名：${order.customerName}）</span>
                 </h3>
               </div>
@@ -210,6 +215,7 @@
                   <option value="制作中" ${order.status === '制作中' ? 'selected' : ''}>制作中</option>
                   <option value="刻印・完成" ${order.status === '刻印・完成' ? 'selected' : ''}>刻印・完成</option>
                   <option value="発送・納品済" ${order.status === '発送・納品済' ? 'selected' : ''}>発送・納品済</option>
+                  <option value="キャンセル" ${order.status === 'キャンセル' ? 'selected' : ''}>キャンセル</option>
                 </select>
               </div>
             </div>
