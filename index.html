@@ -644,15 +644,6 @@
             <h2 id="contentSectionTitle" class="font-bold text-base text-[#4A3930]">制作内容・お写真の添付</h2>
           </div>
 
-          <!-- A: 木製キーホルダー単体用（「裏面メッセージ・文字刻印追加」チェック時のみ表示） -->
-          <div id="physicalFields" class="hidden space-y-3 animate-in">
-            <div>
-              <label for="physicalBacksideText" class="block text-sm font-bold mb-1">裏面に刻印する文字・日付・背番号 <span class="text-[#C86D51]">*</span></label>
-              <p class="text-xs text-[#7D6659] mb-2">例）TANUCHI / 2026.11.22 / 背番号 #96 / いつもありがとう</p>
-              <textarea id="physicalBacksideText" rows="3" placeholder="裏面に刻印したいお名前、日付、背番号、メッセージなどをご記入ください" class="form-input"></textarea>
-            </div>
-          </div>
-
           <!-- B: SNS・LINEアイコン オリジナルキャラクター用入力欄 -->
           <div id="iconFields" class="hidden space-y-3">
             <div class="bg-[#FDF6F3] border border-[#EBC9BC] rounded-2xl p-3.5 text-xs text-[#5C3D2E] space-y-2 leading-relaxed">
@@ -676,7 +667,7 @@
             </div>
           </div>
 
-          <!-- 共通：画像アップロード -->
+          <!-- 共通：画像アップロード（表面イラスト・お写真） -->
           <div id="imageUploadBlock" class="pt-3 border-t border-dashed border-[#DFD3BE]">
             <label id="imageLabel" class="block text-sm font-bold mb-1">参考写真・イラストの添付</label>
             <p id="imageHelpText" class="text-xs text-[#7D6659] mb-2.5 leading-relaxed">※複数枚ある場合はまとめて選択してください（最大8枚）</p>
@@ -693,6 +684,15 @@
               <button type="button" onclick="clearImages()" class="text-xs text-[#C86D51] font-bold underline">選択をクリア</button>
             </div>
             <div id="imagePreviewWrap" class="hidden mt-2 grid grid-cols-3 sm:grid-cols-4 gap-2"></div>
+          </div>
+
+          <!-- A: 木製キーホルダー単体用（「裏面メッセージ・文字刻印追加」チェック時のみ下段に表示） -->
+          <div id="physicalFields" class="hidden space-y-3 pt-4 border-t border-dashed border-[#DFD3BE] animate-in">
+            <div>
+              <label for="physicalBacksideText" class="block text-sm font-bold mb-1">裏面に刻印する文字・日付・背番号 <span class="text-[#C86D51]">*</span></label>
+              <p class="text-xs text-[#7D6659] mb-2">例）TANUCHI / 2026.11.22 / 背番号 #96 / いつもありがとう</p>
+              <textarea id="physicalBacksideText" rows="3" placeholder="裏面に刻印したいお名前、日付、背番号、メッセージなどをご記入ください" class="form-input"></textarea>
+            </div>
           </div>
 
           <!-- C: オリジナルLINEスタンプ ヒアリング項目（写真アップロードの後に表示） -->
@@ -890,17 +890,17 @@
             <p class="text-xs font-bold text-[#8C5535]">📮 キーホルダーのお届け先</p>
             <div>
               <label for="postalCode" class="block text-sm font-bold mb-1">郵便番号 <span class="text-[#C86D51]">*</span></label>
-              <input type="text" id="postalCode" inputmode="numeric" placeholder="例：276-0046" class="form-input" />
+              <input type="text" id="postalCode" inputmode="numeric" placeholder="例：123-4567" class="form-input" />
             </div>
 
             <div>
               <label for="address" class="block text-sm font-bold mb-1">お届け先ご住所 <span class="text-[#C86D51]">*</span></label>
-              <input type="text" id="address" placeholder="例：千葉県八千代市〇〇 1-2-3" class="form-input" />
+              <input type="text" id="address" placeholder="例：千葉県千葉市〇〇1-2-3" class="form-input" />
             </div>
 
             <div>
               <label for="phone" class="block text-sm font-bold mb-1">お電話番号 <span class="text-[#C86D51]">*</span></label>
-              <input type="tel" id="phone" inputmode="tel" placeholder="例：090-1234-5678" class="form-input" />
+              <input type="tel" id="phone" inputmode="tel" placeholder="例：080-〇〇〇〇-〇〇〇〇" class="form-input" />
             </div>
           </div>
 
@@ -1308,11 +1308,12 @@
       stampFields.classList.add('hidden');
 
       if (productType === 'physical') {
-        contentSectionTitle.textContent = "表面のイラスト・お絵かき添付";
+        contentSectionTitle.textContent = isPhysicalBacksideChecked
+          ? "表面・裏面の刻印内容"
+          : "表面のイラスト・お絵かき添付";
         imageUploadBlock.classList.remove('pt-3', 'border-t', 'border-dashed', 'border-[#DFD3BE]');
         if (isPhysicalBacksideChecked) {
           physicalFields.classList.remove('hidden');
-          imageUploadBlock.classList.add('pt-3', 'border-t', 'border-dashed', 'border-[#DFD3BE]');
         }
         imageLabel.innerHTML = '表面に刻印するお絵かき・ロゴ・イラストを添付 <span class="text-[#C86D51]">*</span>';
         imageHelpText.textContent = "※白い紙に黒ペンで描いた絵、または刻印したいロゴ・イラスト画像をお選びください（後からLINEで送ることも可能です）";
